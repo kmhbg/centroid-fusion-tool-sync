@@ -1,0 +1,269 @@
+{
+  "tools": [
+    {
+      "tool_number": 1,
+      "h_number": 1,
+      "d_number": 2,
+      "offset": 0.0,
+      "diameter": 4.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 0.0,
+      "description": "Probe"
+    },
+    {
+      "tool_number": 2,
+      "h_number": 1,
+      "d_number": 4,
+      "offset": 0.0,
+      "diameter": 2.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 3500.0,
+      "description": "4mm 2f end mill"
+    },
+    {
+      "tool_number": 3,
+      "h_number": 3,
+      "d_number": 6,
+      "offset": 0.0,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 2500.0,
+      "description": "6mm 2f end mill"
+    },
+    {
+      "tool_number": 4,
+      "h_number": 4,
+      "d_number": 10,
+      "offset": -52.016,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 2000.0,
+      "description": "10mm 2f end mill"
+    },
+    {
+      "tool_number": 5,
+      "h_number": 5,
+      "d_number": 12,
+      "offset": -46.9511,
+      "diameter": 4.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 1500.0,
+      "description": "12mm 2f end mill"
+    },
+    {
+      "tool_number": 6,
+      "h_number": 6,
+      "d_number": 4,
+      "offset": 0.0,
+      "diameter": 2.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 2500.0,
+      "description": "4mm 4f end mill"
+    },
+    {
+      "tool_number": 7,
+      "h_number": 7,
+      "d_number": 6,
+      "offset": 0.0,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 2000.0,
+      "description": "6mm 4f end mill"
+    },
+    {
+      "tool_number": 8,
+      "h_number": 8,
+      "d_number": 10,
+      "offset": -54.2615,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 1500.0,
+      "description": "10mm 4f end mill"
+    },
+    {
+      "tool_number": 9,
+      "h_number": 9,
+      "d_number": 10,
+      "offset": -26.3835,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 1500.0,
+      "description": "10mm 4f em long"
+    },
+    {
+      "tool_number": 10,
+      "h_number": 10,
+      "d_number": 4,
+      "offset": 0.0,
+      "diameter": 2.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 2500.0,
+      "description": "4mm 90d chamfer mil"
+    },
+    {
+      "tool_number": 11,
+      "h_number": 11,
+      "d_number": 6,
+      "offset": -51.7231,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 2000.0,
+      "description": "6mm 90d chamfer mil"
+    },
+    {
+      "tool_number": 12,
+      "h_number": 12,
+      "d_number": 5,
+      "offset": -55.4649,
+      "diameter": 12.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 2500.0,
+      "description": "4mm 2f r2 round"
+    },
+    {
+      "tool_number": 13,
+      "h_number": 13,
+      "d_number": 8,
+      "offset": -55.9983,
+      "diameter": 10.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 2000.0,
+      "description": "8mm 2f r4.0 round"
+    },
+    {
+      "tool_number": 14,
+      "h_number": 14,
+      "d_number": 6,
+      "offset": -37.3007,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 1750.0,
+      "description": "6mm 4f rough"
+    },
+    {
+      "tool_number": 15,
+      "h_number": 15,
+      "d_number": 6,
+      "offset": -62.6959,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 1250.0,
+      "description": "5mm 4f end mill"
+    },
+    {
+      "tool_number": 16,
+      "h_number": 16,
+      "d_number": 12,
+      "offset": -46.359,
+      "diameter": 4.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 3000.0,
+      "description": "12mm 4f end mill"
+    },
+    {
+      "tool_number": 17,
+      "h_number": 17,
+      "d_number": 6,
+      "offset": -47.4004,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 2500.0,
+      "description": "6mm 3f 631 long"
+    },
+    {
+      "tool_number": 18,
+      "h_number": 18,
+      "d_number": 8,
+      "offset": 0.0,
+      "diameter": 10.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 1750.0,
+      "description": "8mm 3f end mill"
+    },
+    {
+      "tool_number": 19,
+      "h_number": 19,
+      "d_number": 12,
+      "offset": 0.0,
+      "diameter": 4.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 1250.0,
+      "description": "12mm 3f end mill"
+    },
+    {
+      "tool_number": 20,
+      "h_number": 20,
+      "d_number": 20,
+      "offset": 35.0496,
+      "diameter": 3.3,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 0.0,
+      "description": "drill-chuck"
+    },
+    {
+      "tool_number": 21,
+      "h_number": 21,
+      "d_number": 47,
+      "offset": -42.6299,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 1000.0,
+      "description": "47mm facing mill"
+    },
+    {
+      "tool_number": 22,
+      "h_number": 22,
+      "d_number": 10,
+      "offset": -24.4808,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 0.0,
+      "description": "10mm roughing mill"
+    },
+    {
+      "tool_number": 23,
+      "h_number": 23,
+      "d_number": 22,
+      "offset": -24.6801,
+      "diameter": 10.0,
+      "coolant": "OFF",
+      "spindle": "OFF",
+      "speed": 2000.0,
+      "description": "22mm 5f flat end mi"
+    },
+    {
+      "tool_number": 79,
+      "h_number": 79,
+      "d_number": 79,
+      "offset": 0.0,
+      "diameter": 0.0,
+      "coolant": "OFF",
+      "spindle": "CW",
+      "speed": 1200.0,
+      "description": "Drill"
+    }
+  ],
+  "skipped_empty": 176
+}

@@ -1,0 +1,21 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+.cursor/
+
+# Archives
+*.zip
+
+# .NET build output
+**/bin/
+**/obj/
+**/publish/
+**/out/
+
+# Secrets / local
+.env
+*.user
+*.suo

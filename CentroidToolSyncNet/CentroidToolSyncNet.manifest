@@ -1,0 +1,13 @@
+{
+    "autodeskProduct": "Fusion360",
+    "type": "addin",
+    "id": "b7e4d1a2-6c8f-4a9b-9e3d-1f5a8c0b2d47",
+    "author": "toolImport",
+    "description": {
+        "": "v2: Synka Centroid via CSV eller nätverks-bridge (IP) till lokalt Fusion Tool Library."
+    },
+    "version": "2.0.0",
+    "runOnStartup": false,
+    "supportedOS": "windows|mac",
+    "editEnabled": true
+}
