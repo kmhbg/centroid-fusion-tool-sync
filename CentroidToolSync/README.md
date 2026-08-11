@@ -51,7 +51,7 @@ Kopiera mappen `CentroidToolSync` dit och kör add-in som ovan.
 ## Manuell testchecklista
 
 - [ ] Kommandot **Centroid Sync** syns i Manufacture
-- [ ] Välj [tools.csv](../tools.csv) och ett lokalt bibliotek baserat på `Library 260122`
+- [ ] Välj en Centroid `tools.csv` och ett lokalt Fusion Tool Library
 - [ ] Preview visar rimliga updated/added-siffror
 - [ ] Efter sync: befintliga T-nummer har uppdaterad description/RPM/offsets
 - [ ] Holder/feeds på befintliga verktyg är oförändrade
@@ -82,8 +82,8 @@ cd CentroidToolSync
 python3 -c "
 from lib.centroid_parser import parse_centroid_csv, count_empty_rows
 from lib.tool_templates import build_tool_json
-tools = parse_centroid_csv('../tools.csv')
-print(len(tools), 'tools,', count_empty_rows('../tools.csv'), 'empty')
+tools = parse_centroid_csv('/path/to/tools.csv')
+print(len(tools), 'tools,', count_empty_rows('/path/to/tools.csv'), 'empty')
 print(tools[0])
 print(build_tool_json(tools[1])['type'], build_tool_json(tools[1])['post-process'])
 "
