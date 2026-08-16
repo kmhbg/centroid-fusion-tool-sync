@@ -5,7 +5,7 @@ from __future__ import annotations
 import copy
 import math
 import uuid
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from .centroid_parser import CentroidTool
 
@@ -18,6 +18,17 @@ def _coolant(centroid: CentroidTool) -> str:
     if centroid.coolant in ("OFF", "", "NONE"):
         return "disabled"
     return "flood"
+
+
+def _is_empty_number(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str) and not value.strip():
+        return True
+    try:
+        return float(value) == 0.0
+    except (TypeError, ValueError):
+        return True
 
 
 def _base_preset(centroid: CentroidTool, is_drill: bool = False) -> Dict[str, Any]:
@@ -71,13 +82,34 @@ def _base_preset(centroid: CentroidTool, is_drill: bool = False) -> Dict[str, An
     }
 
 
+def _apply_geometry_tokens(geometry: Dict[str, Any], centroid: CentroidTool) -> None:
+    """Overwrite geometry keys when description tokens are present."""
+    if centroid.lcf is not None:
+        geometry["LCF"] = float(centroid.lcf)
+    if centroid.lb is not None:
+        geometry["LB"] = float(centroid.lb)
+        geometry["assemblyGaugeLength"] = float(centroid.lb)
+    if centroid.oal is not None:
+        geometry["OAL"] = float(centroid.oal)
+    if centroid.sfdm is not None:
+        geometry["SFDM"] = float(centroid.sfdm)
+    if centroid.point_angle is not None:
+        geometry["SIG"] = float(centroid.point_angle)
+    if centroid.taper_angle_explicit:
+        geometry["TA"] = float(centroid.taper_angle)
+    if centroid.corner_radius_explicit:
+        geometry["RE"] = float(centroid.corner_radius)
+    if centroid.flutes_explicit:
+        geometry["NOF"] = int(centroid.flutes)
+
+
 def _geometry_for(centroid: CentroidTool) -> Dict[str, Any]:
     dc = float(centroid.diameter)
     nof = int(centroid.flutes or 2)
     tool_type = centroid.tool_type
 
     if tool_type == "probe":
-        return {
+        geometry = {
             "CSP": False,
             "DC": dc,
             "HAND": True,
@@ -90,9 +122,8 @@ def _geometry_for(centroid: CentroidTool) -> Dict[str, Any]:
             "shoulder-diameter": dc,
             "shoulder-length": dc * 3,
         }
-
-    if tool_type == "drill":
-        return {
+    elif tool_type == "drill":
+        geometry = {
             "CSP": False,
             "DC": dc,
             "HAND": True,
@@ -105,9 +136,8 @@ def _geometry_for(centroid: CentroidTool) -> Dict[str, Any]:
             "assemblyGaugeLength": dc * 12,
             "shoulder-length": dc * 12,
         }
-
-    if tool_type == "chamfer mill":
-        return {
+    elif tool_type == "chamfer mill":
+        geometry = {
             "CSP": False,
             "DC": dc,
             "HAND": True,
@@ -122,9 +152,8 @@ def _geometry_for(centroid: CentroidTool) -> Dict[str, Any]:
             "shoulder-length": dc * 4,
             "tip-diameter": 0,
         }
-
-    if tool_type == "ball end mill":
-        return {
+    elif tool_type == "ball end mill":
+        geometry = {
             "CSP": False,
             "DC": dc,
             "HAND": True,
@@ -138,9 +167,8 @@ def _geometry_for(centroid: CentroidTool) -> Dict[str, Any]:
             "shoulder-length": dc * 3,
             "RE": float(centroid.corner_radius or (dc / 2.0)),
         }
-
-    if tool_type == "face mill":
-        return {
+    elif tool_type == "face mill":
+        geometry = {
             "CSP": False,
             "DC": dc,
             "DCX": dc * 1.2,
@@ -157,21 +185,24 @@ def _geometry_for(centroid: CentroidTool) -> Dict[str, Any]:
             "shoulder-length": 40,
             "upper-radius": 0,
         }
+    else:
+        # flat end mill (default)
+        geometry = {
+            "CSP": False,
+            "DC": dc,
+            "HAND": True,
+            "LB": dc * 4,
+            "LCF": dc * 3,
+            "NOF": nof,
+            "OAL": dc * 8,
+            "SFDM": dc,
+            "assemblyGaugeLength": dc * 4,
+            "shoulder-diameter": dc,
+            "shoulder-length": dc * 3.5,
+        }
 
-    # flat end mill (default)
-    return {
-        "CSP": False,
-        "DC": dc,
-        "HAND": True,
-        "LB": dc * 4,
-        "LCF": dc * 3,
-        "NOF": nof,
-        "OAL": dc * 8,
-        "SFDM": dc,
-        "assemblyGaugeLength": dc * 4,
-        "shoulder-diameter": dc,
-        "shoulder-length": dc * 3.5,
-    }
+    _apply_geometry_tokens(geometry, centroid)
+    return geometry
 
 
 def _fusion_type(centroid: CentroidTool) -> str:
@@ -180,6 +211,94 @@ def _fusion_type(centroid: CentroidTool) -> str:
         # tagged clearly so the tool remains usable in CAM.
         return "flat end mill"
     return centroid.tool_type
+
+
+def _set_or_gap_fill(
+    geometry: Dict[str, Any],
+    key: str,
+    token_value: Optional[float],
+    default_value: Any,
+) -> None:
+    if token_value is not None:
+        geometry[key] = float(token_value)
+    elif _is_empty_number(geometry.get(key)) and default_value is not None:
+        geometry[key] = default_value
+
+
+def enrich_tool_json(tool: Dict[str, Any], centroid: CentroidTool) -> Dict[str, Any]:
+    """Apply explicit description tokens; gap-fill empty/zero CAM fields only."""
+    defaults = _geometry_for(centroid)
+    geometry = tool.setdefault("geometry", {})
+
+    _set_or_gap_fill(geometry, "LCF", centroid.lcf, defaults.get("LCF"))
+    _set_or_gap_fill(geometry, "LB", centroid.lb, defaults.get("LB"))
+    _set_or_gap_fill(geometry, "OAL", centroid.oal, defaults.get("OAL"))
+    _set_or_gap_fill(geometry, "SFDM", centroid.sfdm, defaults.get("SFDM"))
+    _set_or_gap_fill(geometry, "SIG", centroid.point_angle, defaults.get("SIG"))
+
+    if centroid.lb is not None:
+        geometry["assemblyGaugeLength"] = float(centroid.lb)
+    elif _is_empty_number(geometry.get("assemblyGaugeLength")):
+        if "assemblyGaugeLength" in defaults:
+            geometry["assemblyGaugeLength"] = defaults["assemblyGaugeLength"]
+
+    if centroid.taper_angle_explicit:
+        geometry["TA"] = float(centroid.taper_angle)
+    elif "TA" in defaults and _is_empty_number(geometry.get("TA")):
+        geometry["TA"] = defaults["TA"]
+
+    if centroid.corner_radius_explicit:
+        geometry["RE"] = float(centroid.corner_radius)
+    elif "RE" in defaults and _is_empty_number(geometry.get("RE")):
+        geometry["RE"] = defaults["RE"]
+
+    if centroid.flutes_explicit:
+        geometry["NOF"] = int(centroid.flutes)
+        expressions = tool.setdefault("expressions", {})
+        expressions["tool_numberOfFlutes"] = str(int(centroid.flutes))
+    elif _is_empty_number(geometry.get("NOF")):
+        geometry["NOF"] = int(defaults.get("NOF") or centroid.flutes or 2)
+        expressions = tool.setdefault("expressions", {})
+        if not expressions.get("tool_numberOfFlutes"):
+            expressions["tool_numberOfFlutes"] = str(int(geometry["NOF"]))
+
+    if centroid.bmc:
+        tool["BMC"] = centroid.bmc
+    elif not tool.get("BMC"):
+        tool["BMC"] = "hss"
+
+    fusion_type = tool.get("type") or _fusion_type(centroid)
+    is_drill = fusion_type == "drill"
+    suggested = _base_preset(centroid, is_drill=is_drill)
+    presets = (tool.get("start-values") or {}).get("presets") or []
+    if presets:
+        preset = presets[0]
+        feed_keys = (
+            "v_f",
+            "v_f_leadIn",
+            "v_f_leadOut",
+            "v_f_plunge",
+            "v_f_ramp",
+            "v_f_transition",
+            "v_f_retract",
+            "f_z",
+            "f_n",
+        )
+        for key in feed_keys:
+            if key in suggested and _is_empty_number(preset.get(key)):
+                preset[key] = suggested[key]
+
+        exprs = preset.setdefault("expressions", {})
+        for key, value in (suggested.get("expressions") or {}).items():
+            if key == "tool_spindleSpeed":
+                continue
+            if key not in exprs or not str(exprs.get(key) or "").strip():
+                exprs[key] = value
+
+        if not preset.get("tool-coolant"):
+            preset["tool-coolant"] = _coolant(centroid)
+
+    return tool
 
 
 def build_tool_json(centroid: CentroidTool) -> Dict[str, Any]:
@@ -192,7 +311,7 @@ def build_tool_json(centroid: CentroidTool) -> Dict[str, Any]:
     diameter_offset = int(centroid.d_number or number)
 
     tool: Dict[str, Any] = {
-        "BMC": "hss",
+        "BMC": centroid.bmc or "hss",
         "description": centroid.description,
         "expressions": {
             "tool_description": "'{}'".format(centroid.description.replace("'", "")),
@@ -223,7 +342,7 @@ def build_tool_json(centroid: CentroidTool) -> Dict[str, Any]:
 
 
 def patch_tool_json(existing: Dict[str, Any], centroid: CentroidTool) -> Dict[str, Any]:
-    """Patch machine fields into an existing Fusion tool JSON, keep GUID/geometry/holder."""
+    """Patch machine fields, then enrich CAM gaps / explicit description tokens."""
     tool = copy.deepcopy(existing)
     tool["description"] = centroid.description
     tool["vendor"] = tool.get("vendor") or "Centroid"
@@ -260,4 +379,4 @@ def patch_tool_json(existing: Dict[str, Any], centroid: CentroidTool) -> Dict[st
         if centroid.diameter and rpm:
             preset["v_c"] = (math.pi * float(centroid.diameter) * rpm) / 1000.0
 
-    return tool
+    return enrich_tool_json(tool, centroid)

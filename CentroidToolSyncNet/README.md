@@ -52,10 +52,46 @@ Det publicerar bryggan + systemfacks-app, sätter autostart vid inloggning och s
 | Regel | Beteende |
 |-------|----------|
 | Match | Tool number |
-| Update | description, RPM, offsets, diameter |
-| Behålls | GUID, holder, feeds, övrig geometry |
-| Add | saknade T-nummer |
+| Update (maskin) | description, RPM, H/D-offset, diameter |
+| Update (CAM) | explicita description-token skrivs; saknade/noll-fält gap-fylls |
+| Behålls | GUID, holder, icke-noll geometry/feeds utan token |
+| Add | saknade T-nummer (tokens + typ/diameter-defaults) |
 | Delete | aldrig |
+
+## Description-namnstandard (CAM)
+
+Se den enkla guiden: [`NAMNSTANDARD.md`](../NAMNSTANDARD.md).
+
+Centroid har ingen full CAM-geometri. Lägg tokens i **Description** så syncen fyller Fusion:
+
+```text
+<TYP> <DC>mm <F>f [R<re>] [SIG<deg>] [TA<deg>] [LCF<mm>] [LB<mm>] [OAL<mm>] [SFDM<mm>] [BMC] [fri text]
+```
+
+| Token | Betydelse |
+|-------|-----------|
+| `EM` / `BL` / `DR` / `CH` / `FM` / `PR` | Typ (eller `end mill`, `ball`, `drill`, …) |
+| `6mm` | Diameter |
+| `4f` | Antal skär |
+| `LCF20` | Flute length (mm) |
+| `LB40` | Body / stickout (mm) |
+| `OAL75` | Overall length (mm) |
+| `SFDM10` | Shank diameter |
+| `SIG118` | Borrspetsvinkel |
+| `R3` / `TA90` | Hörnradius / chamfer-vinkel |
+| `CARB` / `carbide` / `HSS` | BMC |
+
+Exempel:
+
+```text
+EM 6mm 4f LCF20 LB40 OAL75 CARB
+DR 5mm SIG118 LCF50 OAL80 HSS
+BL 6mm 2f R3 LCF12 OAL60
+```
+
+Korta namn som `6mm 2f end mill` fungerar fortfarande (typ/diameter/flutes). Utan `LCF`/`LB`/`OAL` rör syncen inte redan satta längder i Fusion.
+
+**Obs:** Centroid probad `Offset` styr maskinens Z — den mappas **inte** till Fusion `OAL`.
 
 ## Projektstruktur
 
@@ -72,13 +108,19 @@ CentroidToolSyncNet/
 
 ```bash
 cd CentroidToolSyncNet
+python3 -m unittest tests.test_naming_standard -v
+```
+
+Snippet:
+
+```bash
+cd CentroidToolSyncNet
 python3 -c "
-from lib.bridge_client import fetch_tools
-from lib.centroid_parser import from_bridge_payload
-# kräver att bridge körs, annars testa payload-mappning:
 from lib.centroid_parser import from_bridge_dict
-t = from_bridge_dict({'tool_number':2,'h_number':2,'d_number':4,'offset':0,'diameter':4,'coolant':'OFF','spindle':'CW','speed':3500,'description':'4mm 2f end mill'})
+from lib.tool_templates import build_tool_json, patch_tool_json
+t = from_bridge_dict({'tool_number':2,'h_number':2,'d_number':4,'offset':0,'diameter':4,'coolant':'OFF','spindle':'CW','speed':3500,'description':'EM 6mm 4f LCF20 LB40 OAL75 CARB'})
 print(t)
+print(build_tool_json(t)['geometry']['LCF'], build_tool_json(t)['BMC'])
 "
 ```
 

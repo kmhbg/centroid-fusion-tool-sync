@@ -16,11 +16,28 @@ Synkar en Centroid Acorn-export (`tools.csv`) till ett valt **lokalt** Fusion To
 | Regel | Beteende |
 |-------|----------|
 | Matchnyckel | Tool number (`T002` ↔ Fusion tool number 2) |
-| Update | Description, RPM, length/diameter offset, diameter |
-| Behålls vid update | GUID, holder, feeds, övrig geometry |
-| Add | Saknade T-nummer skapas från mall |
+| Update (maskin) | Description, RPM, length/diameter offset, diameter |
+| Update (CAM) | Explicita description-token skrivs; saknade/noll-fält gap-fylls |
+| Behålls vid update | GUID, holder, icke-noll geometry/feeds utan token |
+| Add | Saknade T-nummer skapas från mall + namnstandard |
 | Radering | Aldrig – verktyg som bara finns i Fusion lämnas orörda |
 | Tomma CSV-rader | Hoppas över |
+
+### Description-namnstandard (CAM)
+
+Se den enkla guiden: [`NAMNSTANDARD.md`](../NAMNSTANDARD.md).
+
+Lägg tokens i Centroid **Description** så syncen fyller Fusion-geometri:
+
+```text
+<TYP> <DC>mm <F>f [R<re>] [SIG<deg>] [TA<deg>] [LCF<mm>] [LB<mm>] [OAL<mm>] [SFDM<mm>] [BMC] [fri text]
+```
+
+Exempel: `EM 6mm 4f LCF20 LB40 OAL75 CARB`
+
+Samma standard som v2 (`CentroidToolSyncNet`). Korta namn som `6mm 2f end mill` fungerar fortfarande.
+
+**Obs:** Centroid probad `Offset` mappas **inte** till Fusion `OAL`.
 
 ## Installation (macOS)
 
@@ -79,12 +96,16 @@ Parser och mallar är rena Python-moduler och kan testas utan Fusion:
 
 ```bash
 cd CentroidToolSync
+python3 -m unittest tests.test_naming_standard -v
+```
+
+```bash
+cd CentroidToolSync
 python3 -c "
-from lib.centroid_parser import parse_centroid_csv, count_empty_rows
+from lib.centroid_parser import parse_row
 from lib.tool_templates import build_tool_json
-tools = parse_centroid_csv('/path/to/tools.csv')
-print(len(tools), 'tools,', count_empty_rows('/path/to/tools.csv'), 'empty')
-print(tools[0])
-print(build_tool_json(tools[1])['type'], build_tool_json(tools[1])['post-process'])
+t = parse_row({'Tool':'T002','H':'H002','D':'D004','Offset':'0','Diameter':'0','Coolant':'OFF','Spindle':'CW','Speed':'3500','Description':'EM 6mm 4f LCF20 LB40 OAL75 CARB'})
+print(t)
+print(build_tool_json(t)['geometry']['LCF'], build_tool_json(t)['BMC'])
 "
 ```

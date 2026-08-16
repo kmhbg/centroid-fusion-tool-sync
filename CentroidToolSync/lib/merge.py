@@ -138,15 +138,14 @@ def merge_into_library(
             existing_json = json.loads(existing_tool.toJson())
             if isinstance(existing_json, dict) and "data" in existing_json:
                 existing_json = existing_json["data"][0]
+            # Always replace from enriched JSON so description tokens / gap-fill apply.
             patched = patch_tool_json(existing_json, centroid)
             try:
+                _replace_tool_at_index(library, idx, patched)
+            except Exception:
                 _apply_parameter_patch(existing_tool, centroid)
                 if hasattr(library, "updateTool"):
                     library.updateTool(existing_tool)
-                else:
-                    _replace_tool_at_index(library, idx, patched)
-            except Exception:
-                _replace_tool_at_index(library, idx, patched)
         else:
             payload = build_tool_json(centroid)
             library.add(adsk.cam.Tool.createFromJson(json.dumps(payload)))

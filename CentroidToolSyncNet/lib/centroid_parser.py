@@ -10,13 +10,18 @@ from typing import Iterable, List, Optional, TextIO, Union
 
 
 TYPE_RULES = [
-    (re.compile(r"probe", re.I), "probe"),
-    (re.compile(r"chamfer|90\s*d", re.I), "chamfer mill"),
-    (re.compile(r"facing|face", re.I), "face mill"),
-    (re.compile(r"\bball\b|round", re.I), "ball end mill"),
-    (re.compile(r"drill", re.I), "drill"),
-    (re.compile(r"end\s*mill|\bem\b|rough", re.I), "flat end mill"),
+    (re.compile(r"(?:^|\s)pr(?:\s|$)|probe", re.I), "probe"),
+    (re.compile(r"(?:^|\s)ch(?:\s|$)|chamfer|90\s*d", re.I), "chamfer mill"),
+    (re.compile(r"(?:^|\s)fm(?:\s|$)|facing|\bface\b", re.I), "face mill"),
+    (re.compile(r"(?:^|\s)bl(?:\s|$)|\bball\b|round", re.I), "ball end mill"),
+    (re.compile(r"(?:^|\s)dr(?:\s|$)|drill", re.I), "drill"),
+    (re.compile(r"(?:^|\s)em(?:\s|$)|end\s*mill|\bem\b|rough", re.I), "flat end mill"),
 ]
+
+_TOKEN_FLOAT = re.compile(
+    r"\b(lcf|lb|oal|sfdm|sig|ta)\s*(\d+(?:\.\d+)?)\b",
+    re.I,
+)
 
 
 @dataclass
@@ -34,6 +39,16 @@ class CentroidTool:
     flutes: int
     corner_radius: float
     taper_angle: float
+    # Optional CAM tokens from description (None = not declared)
+    lcf: Optional[float] = None
+    lb: Optional[float] = None
+    oal: Optional[float] = None
+    sfdm: Optional[float] = None
+    bmc: Optional[str] = None
+    point_angle: Optional[float] = None
+    flutes_explicit: bool = False
+    corner_radius_explicit: bool = False
+    taper_angle_explicit: bool = False
 
 
 def digits_from(value: str) -> int:
@@ -47,8 +62,7 @@ def parse_description(description: str) -> dict:
 
     diam_match = re.search(r"(\d+(?:\.\d+)?)\s*mm", lower)
     flute_match = re.search(r"(\d)\s*f\b", lower)
-    radius_match = re.search(r"r\s*(\d+(?:\.\d+)?)", lower)
-    angle_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:d|deg|°)", lower)
+    radius_match = re.search(r"\br\s*(\d+(?:\.\d+)?)\b", lower)
 
     tool_type = "flat end mill"
     for pattern, mapped in TYPE_RULES:
@@ -56,16 +70,58 @@ def parse_description(description: str) -> dict:
             tool_type = mapped
             break
 
+    tokens = {
+        "lcf": None,
+        "lb": None,
+        "oal": None,
+        "sfdm": None,
+        "sig": None,
+        "ta": None,
+    }
+    for match in _TOKEN_FLOAT.finditer(lower):
+        key = match.group(1).lower()
+        tokens[key] = float(match.group(2))
+
+    bmc = None
+    if re.search(r"\b(carbide|carb)\b", lower):
+        bmc = "carbide"
+    elif re.search(r"\bhss\b", lower):
+        bmc = "hss"
+
     taper_angle = 45.0 if tool_type == "chamfer mill" else 0.0
-    if tool_type == "chamfer mill" and angle_match:
-        taper_angle = float(angle_match.group(1))
+    taper_explicit = False
+    # Prefer explicit TA token; fall back to "90d" / "deg" style for chamfer
+    if tokens["ta"] is not None:
+        taper_angle = float(tokens["ta"])
+        taper_explicit = True
+    else:
+        angle_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:d|deg|°)\b", lower)
+        # Ignore bare "d" that is part of typed tokens already consumed; keep legacy 90d
+        if tool_type == "chamfer mill" and angle_match:
+            taper_angle = float(angle_match.group(1))
+            taper_explicit = True
+
+    flutes_explicit = flute_match is not None
+    flutes = int(flute_match.group(1)) if flute_match else 2
+
+    corner_explicit = radius_match is not None
+    corner_radius = float(radius_match.group(1)) if radius_match else 0.0
 
     return {
         "tool_type": tool_type,
         "diameter": float(diam_match.group(1)) if diam_match else None,
-        "flutes": int(flute_match.group(1)) if flute_match else 2,
-        "corner_radius": float(radius_match.group(1)) if radius_match else 0.0,
+        "flutes": flutes,
+        "flutes_explicit": flutes_explicit,
+        "corner_radius": corner_radius,
+        "corner_radius_explicit": corner_explicit,
         "taper_angle": taper_angle,
+        "taper_angle_explicit": taper_explicit,
+        "lcf": tokens["lcf"],
+        "lb": tokens["lb"],
+        "oal": tokens["oal"],
+        "sfdm": tokens["sfdm"],
+        "bmc": bmc,
+        "point_angle": tokens["sig"],
     }
 
 
@@ -74,6 +130,45 @@ def _safe_float(value: str, default: float = 0.0) -> float:
         return float((value or "").strip() or default)
     except ValueError:
         return default
+
+
+def _tool_from_meta(
+    *,
+    tool_number: int,
+    h_number: int,
+    d_number: int,
+    offset: float,
+    diameter: float,
+    coolant: str,
+    spindle: str,
+    speed: float,
+    description: str,
+    meta: dict,
+) -> CentroidTool:
+    return CentroidTool(
+        tool_number=tool_number,
+        h_number=h_number,
+        d_number=d_number,
+        offset=offset,
+        diameter=float(diameter),
+        coolant=coolant,
+        spindle=spindle,
+        speed=speed,
+        description=description,
+        tool_type=meta["tool_type"],
+        flutes=meta["flutes"],
+        corner_radius=meta["corner_radius"],
+        taper_angle=meta["taper_angle"],
+        lcf=meta["lcf"],
+        lb=meta["lb"],
+        oal=meta["oal"],
+        sfdm=meta["sfdm"],
+        bmc=meta["bmc"],
+        point_angle=meta["point_angle"],
+        flutes_explicit=meta["flutes_explicit"],
+        corner_radius_explicit=meta["corner_radius_explicit"],
+        taper_angle_explicit=meta["taper_angle_explicit"],
+    )
 
 
 def parse_row(row: dict) -> Optional[CentroidTool]:
@@ -87,7 +182,7 @@ def parse_row(row: dict) -> Optional[CentroidTool]:
     if not diameter or diameter <= 0:
         diameter = 1.0
 
-    return CentroidTool(
+    return _tool_from_meta(
         tool_number=digits_from(row.get("Tool", "")),
         h_number=digits_from(row.get("H", "")),
         d_number=digits_from(row.get("D", "")),
@@ -97,10 +192,7 @@ def parse_row(row: dict) -> Optional[CentroidTool]:
         spindle=(row.get("Spindle") or "OFF").strip().upper(),
         speed=_safe_float(row.get("Speed", ""), 0.0),
         description=description,
-        tool_type=meta["tool_type"],
-        flutes=meta["flutes"],
-        corner_radius=meta["corner_radius"],
-        taper_angle=meta["taper_angle"],
+        meta=meta,
     )
 
 
@@ -166,7 +258,7 @@ def from_bridge_dict(row: dict) -> Optional[CentroidTool]:
     except (TypeError, ValueError):
         d_number = tool_number
 
-    return CentroidTool(
+    return _tool_from_meta(
         tool_number=tool_number,
         h_number=h_number,
         d_number=d_number,
@@ -176,10 +268,7 @@ def from_bridge_dict(row: dict) -> Optional[CentroidTool]:
         spindle=str(row.get("spindle") or "OFF").strip().upper(),
         speed=_safe_float(str(row.get("speed", 0)), 0.0),
         description=description,
-        tool_type=meta["tool_type"],
-        flutes=meta["flutes"],
-        corner_radius=meta["corner_radius"],
-        taper_angle=meta["taper_angle"],
+        meta=meta,
     )
 
 
